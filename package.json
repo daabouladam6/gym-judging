@@ -1,0 +1,15 @@
+{
+  "name": "gym-judging",
+  "private": true,
+  "workspaces": ["server", "web", "shared"],
+  "scripts": {
+    "start": "npm run dev",
+    "dev": "concurrently -n server,web -c blue,green \"npm run dev -w @gym/server\" \"npm run dev -w @gym/web\"",
+    "dev:server": "npm run dev -w @gym/server",
+    "build": "npm run build -w @gym/shared && npm run build -w @gym/web && npm run build -w @gym/server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "typescript": "^5.7.2"
+  }
+}
