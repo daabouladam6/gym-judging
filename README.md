@@ -10,6 +10,10 @@ You must keep the terminal window open — closing it stops the servers.
 
 API + WebSocket: `http://127.0.0.1:3000`
 
+## Publish to GitHub (for Fly.io or backups)
+
+See **[GITHUB_SETUP.md](./GITHUB_SETUP.md)** — you must sign in once (`gh auth login`), then run `scripts/publish-to-github.ps1`.
+
 ## Database schema updates
 
 After pulling changes that add new tables (e.g. judge correction requests), run from the repo root:
