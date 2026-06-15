@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+**/dist
+.git
+.env
+.env.*
+*.log
+debug-*.log
+**/*.db
+.DS_Store
+Thumbs.db
+.cursor
+mcps

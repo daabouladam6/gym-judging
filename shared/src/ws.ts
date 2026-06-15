@@ -31,16 +31,17 @@ export const scoreFinalizePayload = z.object({
   pendingDValue: z.number().optional(),
 });
 
+const scoreAmendFinalizedBase = z.object({
+  routineScoreId: z.string().uuid(),
+  expectedVersion: z.number().int().nonnegative(),
+  reason: z.string().min(3),
+  newDeductionTotal: z.number().optional(),
+  newDValue: z.number().optional(),
+});
+
 /** Judge-only: correct a finalized score with reason (logged for admins). */
-export const scoreAmendFinalizedPayload = z
-  .object({
-    routineScoreId: z.string().uuid(),
-    expectedVersion: z.number().int().nonnegative(),
-    reason: z.string().min(3),
-    newDeductionTotal: z.number().optional(),
-    newDValue: z.number().optional(),
-  })
-  .superRefine((d, ctx) => {
+export const scoreAmendFinalizedPayload = scoreAmendFinalizedBase.superRefine(
+  (d: z.infer<typeof scoreAmendFinalizedBase>, ctx: z.RefinementCtx) => {
     const hasE = d.newDeductionTotal !== undefined;
     const hasD = d.newDValue !== undefined;
     if (hasE === hasD) {
@@ -53,7 +54,8 @@ export const scoreAmendFinalizedPayload = z
     if (hasE && (d.newDeductionTotal ?? 0) < 0) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Deduction total cannot be negative." });
     }
-  });
+  },
+);
 
 export const routineAdminLockPayload = z.object({
   routineId: z.string().uuid(),
