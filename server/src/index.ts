@@ -1,3 +1,4 @@
+import { dbgBoot } from "./debugBoot.js";
 import cors from "@fastify/cors";
 import staticPlugin from "@fastify/static";
 import Fastify from "fastify";
@@ -17,10 +18,12 @@ if (!fs.existsSync(webDist)) {
     `Missing frontend build at ${webDist}. Run "npm run build" from the repo root (includes @gym/web) before production start.`,
   );
 }
+dbgBoot("index.ts", "webDist ok", { hypothesisId: "H3", webDist });
 
 const app = Fastify({ logger: true });
 await app.register(cors, { origin: true, credentials: true });
 
+dbgBoot("index.ts", "before registerHttpRoutes", { hypothesisId: "H1" });
 await registerHttpRoutes(app);
 await registerWebSocket(app);
 
@@ -39,7 +42,9 @@ app.setNotFoundHandler((req, reply) => {
 
 const port = Number(process.env.PORT) || 3000;
 const host = process.env.HOST || "0.0.0.0";
+dbgBoot("index.ts", "before listen", { hypothesisId: "H2", port, host, PORT: process.env.PORT });
 await app.listen({ port, host });
+dbgBoot("index.ts", "after listen", { hypothesisId: "H2", port, host });
 console.log(`Gym judging server http://${host}:${port}`);
 // #region agent log
 void fetch("http://127.0.0.1:7446/ingest/1cb515c7-c4af-48be-a4e5-3665f7d270e2", {

@@ -35,6 +35,7 @@ import {
   deleteJudgeById,
 } from "../services/delete.js";
 import { buildCompetitionViewerPayload, listUsersSafe } from "../services/state.js";
+import { dbgBoot } from "../debugBoot.js";
 
 const AGENT_DEBUG_LOG = path.join(path.dirname(fileURLToPath(import.meta.url)), "../../../debug-5f3141.log");
 function agentDebugNdjson(payload: Record<string, unknown>) {
@@ -93,6 +94,7 @@ async function requireCompetitionHasArchivedAthletes(competitionId: string, repl
 }
 
 export async function registerHttpRoutes(app: FastifyInstance) {
+  dbgBoot("routes.ts:registerHttpRoutes", "enter", { hypothesisId: "H1" });
   app.post("/api/auth/login", async (req, reply) => {
     const body = z
       .object({ username: z.string().min(1), password: z.string().min(1) })
