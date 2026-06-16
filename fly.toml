@@ -1,22 +1,30 @@
-# Fly.io app config — name must match your Fly app (see dashboard URL).
-# Change primary_region if you want the app closer to your users (e.g. "ams", "lhr", "syd").
-app = "gym-judging"
-primary_region = "iad"
+# fly.toml app configuration file generated for artisticg-gymnastics-judging on 2026-06-16T13:13:47Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'artisticg-gymnastics-judging'
+primary_region = 'cdg'
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = 'Dockerfile'
 
 [http_service]
   internal_port = 8080
   force_https = true
-  # Avoid stopping the only machine while Fly runs deploy health checks (timeouts seen with "stop" + min 0).
-  auto_stop_machines = "off"
+  auto_stop_machines = 'off'
   auto_start_machines = true
   min_machines_running = 1
 
-[[http_service.checks]]
-  interval = "15s"
-  timeout = "15s"
-  grace_period = "90s"
-  method = "GET"
-  path = "/"
+  [[http_service.checks]]
+    interval = '15s'
+    timeout = '15s'
+    grace_period = '1m30s'
+    method = 'GET'
+    path = '/'
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
+  memory_mb = 1024
