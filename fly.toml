@@ -1,6 +1,7 @@
 # Fly.io app config — name must match your Fly app (see dashboard URL).
+# Deploy without --image so Fly builds this Dockerfile (pinned images keep old PORT/listen behavior).
 # Change primary_region if you want the app closer to your users (e.g. "ams", "lhr", "syd").
-app = "gym-judging"
+app = "artisticg-gymnastics-judging"
 primary_region = "iad"
 
 [build]
