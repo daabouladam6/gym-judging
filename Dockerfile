@@ -13,8 +13,8 @@ RUN npm run build
 RUN npm prune --omit=dev
 
 ENV NODE_ENV=production
-ENV PORT=3000
+# Fly sets PORT at runtime to match [http_service].internal_port — do not hardcode (was 3000 vs proxy 8080).
 ENV HOST=0.0.0.0
-EXPOSE 3000
+EXPOSE 8080
 
 CMD ["node", "server/dist/index.js"]
