@@ -18,6 +18,19 @@ See **[GITHUB_SETUP.md](./GITHUB_SETUP.md)** — you must sign in once (`gh auth
 
 The Docker image runs **`drizzle-kit push --force`** and **`seed`** at **build** time so SQLite has tables and a default **`admin` / `admin123`** user (same as local `npm run seed -w @gym/server`). Without that, production would start with an empty DB and **`/api/auth/login`** could return **500** (`no such table: users`). Rebuild and redeploy after schema changes so the image picks up a fresh push.
 
+### Deploying (read this if deploys “always fail”)
+
+Fly (and some UIs) may show a command like **`flyctl deploy -a … --image registry.fly.io/…:deployment-…`**. **Do not use that for normal updates.** The `--image` flag **skips a fresh build** and runs an **old** image that often still listens on **port 3000** while **`fly.toml`** expects **8080** → proxy warning + health check timeouts forever.
+
+**Do this instead:**
+
+- **From the repo root:** `fly deploy --config fly.toml` (no `--image`, no `--depot-scope` required for a correct deploy).
+- **Windows:** double-click **`scripts/fly-deploy.cmd`** or run `powershell -File scripts/fly-deploy.ps1` from the repo root.
+
+**From the Fly dashboard:** use the flow that **builds from GitHub** (e.g. **Deploy app** tied to your repo), not “deploy this existing registry tag” if that option only reuses a **`deployment-…`** image.
+
+After you push code to **`main`**, run one of the above so Fly **builds a new image** from the current **`Dockerfile`**.
+
 ## Database schema updates
 
 After pulling changes that add new tables (e.g. judge correction requests), run from the repo root:
