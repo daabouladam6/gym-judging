@@ -14,6 +14,10 @@ API + WebSocket: `http://127.0.0.1:3000`
 
 See **[GITHUB_SETUP.md](./GITHUB_SETUP.md)** — you must sign in once (`gh auth login`), then run `scripts/publish-to-github.ps1`.
 
+## Fly.io / Docker
+
+The Docker image runs **`drizzle-kit push --force`** and **`seed`** at **build** time so SQLite has tables and a default **`admin` / `admin123`** user (same as local `npm run seed -w @gym/server`). Without that, production would start with an empty DB and **`/api/auth/login`** could return **500** (`no such table: users`). Rebuild and redeploy after schema changes so the image picks up a fresh push.
+
 ## Database schema updates
 
 After pulling changes that add new tables (e.g. judge correction requests), run from the repo root:

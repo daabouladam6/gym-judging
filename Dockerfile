@@ -10,6 +10,9 @@ RUN apt-get update -qq \
 COPY . .
 RUN npm ci
 RUN npm run build
+# Ephemeral Fly machines start with no DB — .dockerignore drops **/*.db. Apply schema + default admin before devDeps are pruned.
+RUN mkdir -p server/data && cd server && npm run db:push:force
+RUN cd server && npx tsx src/seed.ts
 RUN npm prune --omit=dev
 
 ENV NODE_ENV=production
