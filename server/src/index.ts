@@ -12,6 +12,11 @@ fs.mkdirSync(path.join(here, "../data"), { recursive: true });
 
 const repoRoot = path.join(here, "../..");
 const webDist = path.join(repoRoot, "web/dist");
+if (!fs.existsSync(webDist)) {
+  throw new Error(
+    `Missing frontend build at ${webDist}. Run "npm run build" from the repo root (includes @gym/web) before production start.`,
+  );
+}
 
 const app = Fastify({ logger: true });
 await app.register(cors, { origin: true, credentials: true });
