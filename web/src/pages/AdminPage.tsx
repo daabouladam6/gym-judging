@@ -400,11 +400,13 @@ export function AdminPage() {
 
     e.preventDefault();
 
+    const form = e.currentTarget;
+
     setError(null);
 
     setMsg(null);
 
-    const name = String(new FormData(e.currentTarget).get("cname") ?? "").trim();
+    const name = String(new FormData(form).get("cname") ?? "").trim();
 
     if (!name) return;
 
@@ -416,7 +418,7 @@ export function AdminPage() {
 
       setMsg(`Competition “${name}” created.`);
 
-      e.currentTarget.reset();
+      form.reset();
 
     } catch (err) {
 
@@ -483,6 +485,8 @@ export function AdminPage() {
 
     e.preventDefault();
 
+    const form = e.currentTarget;
+
     if (!activeId) {
 
       setError("Select or create a competition first.");
@@ -495,7 +499,7 @@ export function AdminPage() {
 
     setMsg(null);
 
-    const fd = new FormData(e.currentTarget);
+    const fd = new FormData(form);
 
     const name = String(fd.get("aname") ?? "").trim();
 
@@ -515,7 +519,7 @@ export function AdminPage() {
 
       setMsg(`Athlete “${name}” added.`);
 
-      e.currentTarget.reset();
+      form.reset();
 
     } catch (err) {
 
@@ -561,11 +565,13 @@ export function AdminPage() {
 
     e.preventDefault();
 
+    const form = e.currentTarget;
+
     setError(null);
 
     setMsg(null);
 
-    const fd = new FormData(e.currentTarget);
+    const fd = new FormData(form);
 
     const username = String(fd.get("u") ?? "").trim();
 
@@ -581,7 +587,7 @@ export function AdminPage() {
 
       setMsg(`Judge “${displayName || username}” created.`);
 
-      e.currentTarget.reset();
+      form.reset();
 
     } catch (err) {
 
