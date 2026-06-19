@@ -4,6 +4,10 @@
 app = "artisticg-gymnastics-judging"
 primary_region = "iad"
 
+[env]
+  PORT = "8080"
+  HOST = "0.0.0.0"
+
 [build]
   dockerfile = "Dockerfile"
 

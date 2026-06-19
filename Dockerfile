@@ -16,7 +16,7 @@ RUN cd server && npx tsx src/seed.ts
 RUN npm prune --omit=dev
 
 ENV NODE_ENV=production
-# Fly sets PORT at runtime to match [http_service].internal_port — do not hardcode (was 3000 vs proxy 8080).
+ENV PORT=8080
 ENV HOST=0.0.0.0
 EXPOSE 8080
 
