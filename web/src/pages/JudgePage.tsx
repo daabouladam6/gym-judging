@@ -503,7 +503,7 @@ export function JudgePage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", padding: "1rem", maxWidth: 720, margin: "0 auto" }}>
+    <div className="judge-app">
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>
         <div>
           <h1 style={{ margin: 0, fontSize: "1.35rem" }}>Judge panel</h1>
@@ -628,83 +628,61 @@ export function JudgePage() {
           ) : null}
 
           {selectedAthlete && myScore && panelRole === "E" ? (
-            <section className="panel">
+            <section className="panel judge-execution-panel">
               <h2>Execution panel</h2>
               <p className="muted" style={{ margin: "0 0 0.75rem" }}>
                 {selectedAthlete.name} · {activeApparatus}
                 {routineLocked ? " · locked" : myScore.finalized ? " · submitted" : ""}
               </p>
-              <div
-                style={{
-                  display: "grid",
-                  gap: "0.5rem",
-                  marginBottom: "1rem",
-                  padding: "0.75rem",
-                  border: "1px solid #233249",
-                  borderRadius: "10px",
-                }}
-              >
-                <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-                  <span className="muted">
-                    {myScore.finalized ? "Submitted deduction total" : "Deduction total"}
-                  </span>
-                  <span style={{ fontWeight: 700, fontSize: "1.35rem" }}>
-                    {eExecNumbers ? eExecNumbers.displaySd.toFixed(3) : (myScore.deductionTotal ?? 0).toFixed(3)}
-                  </span>
-                </div>
-                <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
-                  <span className="muted">Your execution score</span>
-                  <span style={{ fontWeight: 700, fontSize: "1.35rem", color: "#c7e0ff" }}>
-                    {eExecNumbers ? eExecNumbers.displayExec.toFixed(3) : myScore.computedValue.toFixed(3)}
-                  </span>
-                </div>
-                {!myScore.finalized ? (
-                  <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>
-                    Execution score cannot go below 0. Deduction keys disable when you reach 0. Numbers update
-                    immediately; the server confirms on the next sync.
-                  </p>
-                ) : (
-                  <p className="muted" style={{ margin: 0, fontSize: "0.82rem" }}>
-                    This panel hides difficulty, combined results, and other judges so you see only what you submitted.
-                  </p>
-                )}
-              </div>
+              {!myScore.finalized ? (
+                <p className="muted judge-execution-hint" style={{ margin: "0 0 0.85rem", fontSize: "0.82rem" }}>
+                  Execution cannot go below 0 — keys disable at the limit. Numbers update immediately; the server
+                  confirms on sync.
+                </p>
+              ) : (
+                <p className="muted" style={{ margin: "0 0 0.85rem", fontSize: "0.82rem" }}>
+                  This panel hides difficulty, combined results, and other judges so you see only what you submitted.
+                </p>
+              )}
               {!myScore.finalized ? (
                 <>
-                  <p className="muted" style={{ margin: "0 0 0.35rem", fontWeight: 600 }}>
-                    Set execution score directly (optional)
-                  </p>
-                  <p className="muted" style={{ margin: "0 0 0.5rem", fontSize: "0.82rem" }}>
-                    Enter your score (minimum 0), then apply. You must type a reason for the audit log — same as
-                    changing D on the other panel.
-                  </p>
-                  <div className="row" style={{ marginBottom: "0.85rem", flexWrap: "wrap" }}>
-                    <input
-                      type="number"
-                      step="0.001"
-                      min={0}
-                      value={eExecutionDraft}
-                      onChange={(e) => setEExecutionDraft(e.target.value)}
+                  <details className="judge-execution-advanced">
+                    <summary>Set execution score directly (optional)</summary>
+                    <p className="muted" style={{ margin: "0.5rem 0", fontSize: "0.82rem" }}>
+                      Enter your score (minimum 0), then apply. You must type a reason for the audit log.
+                    </p>
+                    <div className="row" style={{ marginBottom: "0.5rem", flexWrap: "wrap" }}>
+                      <input
+                        type="number"
+                        step="0.001"
+                        min={0}
+                        value={eExecutionDraft}
+                        onChange={(e) => setEExecutionDraft(e.target.value)}
+                        disabled={locked || !ready}
+                        style={{ width: "8.5rem" }}
+                      />
+                      <button type="button" disabled={locked || !ready} onClick={onSubmitExecutionDisplayed}>
+                        Apply score (reason required)
+                      </button>
+                    </div>
+                  </details>
+                  <div className="calc-pad-sticky">
+                    <p className="calc-pad-heading muted">
+                      Deduction calculator · {preset.replace("_", " ")}
+                    </p>
+                    <DeductionPad
+                      mode={preset}
                       disabled={locked || !ready}
-                      style={{ width: "8.5rem" }}
+                      maxAdditionalDeduction={eExecNumbers?.additionalHeadroom}
+                      deductionTotal={eExecNumbers?.displaySd ?? myScore.deductionTotal ?? 0}
+                      executionScore={eExecNumbers?.displayExec ?? myScore.computedValue}
+                      onDeduction={onDeduction}
                     />
-                    <button type="button" disabled={locked || !ready} onClick={onSubmitExecutionDisplayed}>
-                      Apply score (reason required)
-                    </button>
-                  </div>
-                  <p className="muted" style={{ margin: "0 0 0.5rem" }}>
-                    Tap deductions ({preset.replace("_", " ")})
-                  </p>
-                  <DeductionPad
-                    mode={preset}
-                    disabled={locked || !ready}
-                    maxAdditionalDeduction={eExecNumbers?.additionalHeadroom}
-                    onDeduction={onDeduction}
-                  />
-                  <div style={{ marginTop: "1.25rem" }}>
-                    <button type="button" className="primary" disabled={locked || !ready} onClick={onFinalize}>
-                      Finalize deductions
-                    </button>
+                    <div className="calc-pad-finalize">
+                      <button type="button" className="primary calc-pad-finalize-btn" disabled={locked || !ready} onClick={onFinalize}>
+                        Finalize deductions
+                      </button>
+                    </div>
                   </div>
                 </>
               ) : (
