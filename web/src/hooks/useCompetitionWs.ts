@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getToken } from "../api/client";
 
+export type LiveWsEvent = { type: string; competitionId?: string };
+
 type WsSend = (message: Record<string, unknown>) => void;
 
 const LIVE_EVENT_TYPES = new Set([
@@ -15,29 +17,42 @@ function isLiveEvent(type: string | undefined): boolean {
   return typeof type === "string" && LIVE_EVENT_TYPES.has(type);
 }
 
-/** Live sync over WebSocket — auto-refreshes when server data changes. */
+/** Live sync over WebSocket — refreshes when server data changes. */
 export function useCompetitionWs(
   competitionId: string | undefined,
-  onRefresh: () => void,
+  onLiveEvent: (event: LiveWsEvent) => void,
   onServerMessage?: (errorMessage: string) => void,
 ) {
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const unmountedRef = useRef(false);
   const [ready, setReady] = useState(false);
-  const onRefreshRef = useRef(onRefresh);
-  onRefreshRef.current = onRefresh;
+  const onLiveEventRef = useRef(onLiveEvent);
+  onLiveEventRef.current = onLiveEvent;
   const onServerMessageRef = useRef(onServerMessage);
   onServerMessageRef.current = onServerMessage;
-  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingEventRef = useRef<LiveWsEvent | null>(null);
   const competitionIdRef = useRef(competitionId);
   competitionIdRef.current = competitionId;
 
-  const scheduleRefresh = useCallback(() => {
-    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-    refreshTimerRef.current = setTimeout(() => {
-      refreshTimerRef.current = null;
-      onRefreshRef.current();
-    }, 200);
+  const flushLiveEvent = useCallback(() => {
+    const ev = pendingEventRef.current;
+    pendingEventRef.current = null;
+    if (ev) onLiveEventRef.current(ev);
   }, []);
+
+  const scheduleLiveEvent = useCallback(
+    (event: LiveWsEvent) => {
+      pendingEventRef.current = event;
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        debounceRef.current = null;
+        flushLiveEvent();
+      }, 250);
+    },
+    [flushLiveEvent],
+  );
 
   const subscribeCompetition = useCallback((ws: WebSocket, compId: string) => {
     if (ws.readyState === WebSocket.OPEN) {
@@ -45,9 +60,9 @@ export function useCompetitionWs(
     }
   }, []);
 
-  useEffect(() => {
+  const connect = useCallback(() => {
     const token = getToken();
-    if (!token) return;
+    if (!token || unmountedRef.current) return;
 
     const protocol = location.protocol === "https:" ? "wss:" : "ws:";
     const ws = new WebSocket(`${protocol}//${location.host}/ws`);
@@ -84,22 +99,34 @@ export function useCompetitionWs(
           return;
         }
         if (isLiveEvent(d.type)) {
-          scheduleRefresh();
+          scheduleLiveEvent({ type: d.type!, competitionId: d.competitionId });
         }
       } catch {
         /* ignore parse errors */
       }
     });
 
-    ws.addEventListener("close", () => setReady(false));
+    ws.addEventListener("close", () => {
+      setReady(false);
+      wsRef.current = null;
+      if (unmountedRef.current) return;
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = setTimeout(() => connect(), 2500);
+    });
+  }, [scheduleLiveEvent, subscribeCompetition]);
 
+  useEffect(() => {
+    unmountedRef.current = false;
+    connect();
     return () => {
-      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
-      ws.close();
+      unmountedRef.current = true;
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+      wsRef.current?.close();
       wsRef.current = null;
       setReady(false);
     };
-  }, [scheduleRefresh, subscribeCompetition]);
+  }, [connect]);
 
   useEffect(() => {
     if (!competitionId || !ready) return;

@@ -5,7 +5,13 @@ import { registerSW } from "virtual:pwa-register";
 import { App } from "./App";
 import "./index.css";
 
-registerSW({ immediate: true });
+/** Do not auto-reload mid-event — avoids kicking judges/admins out of their tab. */
+registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    /* User can hard-refresh when convenient. */
+  },
+});
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

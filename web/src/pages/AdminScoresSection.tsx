@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { categoryLabel, sortCategoryKeys } from "@gym/shared";
+import { loadScoresSelection, saveScoresSelection } from "../adminUiState";
 
 import {
   adminUpdateDScore,
@@ -117,7 +118,9 @@ export function AdminScoresSection({
   scoresReadOnly = false,
   embedded = false,
 }: Props) {
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [selectedKey, setSelectedKey] = useState<string | null>(() =>
+    activeId ? loadScoresSelection(activeId) : null,
+  );
   const [nameFilter, setNameFilter] = useState("");
   const [adminModal, setAdminModal] = useState<AdminScoreModal | null>(null);
 
@@ -127,10 +130,14 @@ export function AdminScoresSection({
   );
 
   useEffect(() => {
-    setSelectedKey(null);
+    setSelectedKey(activeId ? loadScoresSelection(activeId) : null);
     setNameFilter("");
     setAdminModal(null);
   }, [activeId]);
+
+  useEffect(() => {
+    if (activeId) saveScoresSelection(activeId, selectedKey);
+  }, [activeId, selectedKey]);
 
   useEffect(() => {
     if (!selectedKey) return;

@@ -84,9 +84,8 @@ import { athleteCategoryKey, categoryLabel } from "@gym/shared";
 
 import { AdminScoresSection } from "./AdminScoresSection";
 import { AdminHistorySection } from "./AdminHistorySection";
+import { loadAdminUi, saveAdminUi, type AdminSectionId } from "../adminUiState";
 import { useCompetitionWs } from "../hooks/useCompetitionWs";
-
-type AdminSectionId = "competition" | "athletes" | "judges" | "categories" | "scores" | "corrections" | "history";
 
 const ADMIN_TAB_IDS: readonly AdminSectionId[] = [
   "competition",
@@ -156,21 +155,43 @@ export function AdminPage() {
 
   const [deletePasswordInput, setDeletePasswordInput] = useState("");
 
-  const [adminSection, setAdminSection] = useState<AdminSectionId>("competition");
+  const savedUi = loadAdminUi();
+
+  const [adminSection, setAdminSection] = useState<AdminSectionId>(() => savedUi.section ?? "competition");
 
   /** Athletes tab: browse groups vs one group's roster + judges. */
-  const [athletesBrowse, setAthletesBrowse] = useState<"groups" | "detail">("groups");
-  const [athletesDetailCategoryKey, setAthletesDetailCategoryKey] = useState<string | null>(null);
+  const [athletesBrowse, setAthletesBrowse] = useState<"groups" | "detail">(
+    () => savedUi.athletesBrowse ?? "groups",
+  );
+  const [athletesDetailCategoryKey, setAthletesDetailCategoryKey] = useState<string | null>(
+    () => savedUi.athletesDetailCategoryKey ?? null,
+  );
 
   /** Judges tab: browse judges vs one judge's panel (apparatus/E-D) assignments. */
-  const [judgesBrowse, setJudgesBrowse] = useState<"list" | "detail">("list");
-  const [judgesDetailUserId, setJudgesDetailUserId] = useState<string | null>(null);
+  const [judgesBrowse, setJudgesBrowse] = useState<"list" | "detail">(() => savedUi.judgesBrowse ?? "list");
+  const [judgesDetailUserId, setJudgesDetailUserId] = useState<string | null>(
+    () => savedUi.judgesDetailUserId ?? null,
+  );
 
   /** Scores tab: clear-all audit logs (inline password — avoids blocked window.prompt). */
   const [auditLogClearOpen, setAuditLogClearOpen] = useState(false);
   const [auditLogClearPassword, setAuditLogClearPassword] = useState("");
 
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const adminSectionRef = useRef(adminSection);
+  adminSectionRef.current = adminSection;
+  const activeIdRef = useRef(activeId);
+  activeIdRef.current = activeId;
+
+  useEffect(() => {
+    saveAdminUi({
+      section: adminSection,
+      athletesBrowse,
+      athletesDetailCategoryKey,
+      judgesBrowse,
+      judgesDetailUserId,
+    });
+  }, [adminSection, athletesBrowse, athletesDetailCategoryKey, judgesBrowse, judgesDetailUserId]);
 
 
 
@@ -307,69 +328,76 @@ export function AdminPage() {
 
 
 
-  const refreshLiveData = useCallback(async () => {
+  const handleLiveEvent = useCallback(
+    (event: { type: string; competitionId?: string }) => {
+      const section = adminSectionRef.current;
+      const compId = activeIdRef.current;
+      const scoreEvents = new Set(["score.updated", "rankings.updated", "correction.requested"]);
 
-    try {
-
-      await refreshCompetitions();
-
-      await refreshJudges();
-
-      if (activeId) {
-
-        await Promise.all([
-
-          refreshAthletes(activeId),
-
-          refreshAssignments(activeId),
-
-          refreshCategories(activeId),
-
-          refreshCategoryAssignments(activeId),
-
-          refreshSnapshot(activeId),
-
-          refreshCorrectionRequests(),
-
-        ]);
-
+      if (event.type === "global.updated") {
+        if (section === "competition" || section === "history") void refreshCompetitions();
+        if (section === "judges" || section === "categories") void refreshJudges();
+        return;
       }
 
-    } catch {
+      if (event.competitionId && compId && event.competitionId !== compId) return;
 
-      setError("Could not refresh live data");
+      if (!compId) {
+        if (section === "competition") void refreshCompetitions();
+        return;
+      }
 
-    }
+      switch (section) {
+        case "competition":
+          void refreshCompetitions();
+          break;
+        case "athletes":
+          void Promise.all([refreshAthletes(compId), refreshCategories(compId)]);
+          break;
+        case "judges":
+          void Promise.all([refreshJudges(), refreshAssignments(compId)]);
+          break;
+        case "categories":
+          void Promise.all([refreshCategories(compId), refreshCategoryAssignments(compId)]);
+          break;
+        case "scores":
+          if (scoreEvents.has(event.type) || event.type === "competition.updated") {
+            void refreshSnapshot(compId);
+          }
+          break;
+        case "corrections":
+          void refreshCorrectionRequests();
+          if (scoreEvents.has(event.type)) void refreshSnapshot(compId);
+          break;
+        case "history":
+          void refreshCompetitions();
+          break;
+        default:
+          break;
+      }
+    },
+    [
+      refreshCompetitions,
+      refreshJudges,
+      refreshAthletes,
+      refreshCategories,
+      refreshAssignments,
+      refreshCategoryAssignments,
+      refreshSnapshot,
+      refreshCorrectionRequests,
+    ],
+  );
 
-  }, [
+  const { ready: liveReady } = useCompetitionWs(activeId || undefined, handleLiveEvent);
 
-    activeId,
-
-    refreshCompetitions,
-
-    refreshJudges,
-
-    refreshAthletes,
-
-    refreshAssignments,
-
-    refreshCategories,
-
-    refreshCategoryAssignments,
-
-    refreshSnapshot,
-
-    refreshCorrectionRequests,
-
-  ]);
-
-
-
-  const { ready: liveReady } = useCompetitionWs(activeId || undefined, () => {
-
-    void refreshLiveData();
-
-  });
+  useEffect(() => {
+    if (!session.user || session.user.role !== "ADMIN") return;
+    if (liveReady) return;
+    const id = window.setInterval(() => {
+      handleLiveEvent({ type: "competition.updated", competitionId: activeIdRef.current });
+    }, 10_000);
+    return () => window.clearInterval(id);
+  }, [session.user, liveReady, handleLiveEvent]);
 
 
 
@@ -1048,9 +1076,13 @@ export function AdminPage() {
             <div className="admin-toolbar-actions">
               <span
                 className={`live-pill${liveReady ? " live-pill--on" : ""}`}
-                title={liveReady ? "Live updates on" : "Connecting…"}
+                title={
+                  liveReady
+                    ? "Live updates on"
+                    : "Reconnecting — checking for changes every 10 seconds"
+                }
               >
-                {liveReady ? "Live" : "…"}
+                {liveReady ? "Live" : "Sync…"}
               </span>
               <button type="button" className="ghost" onClick={() => void session.logoutFn().then(() => nav("/login"))}>
 
