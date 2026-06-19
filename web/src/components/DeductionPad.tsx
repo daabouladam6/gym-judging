@@ -10,6 +10,7 @@ type Props = {
   deductionTotal?: number;
   /** Execution score after deductions (shown on calculator display). */
   executionScore?: number;
+  layout?: "default" | "fullscreen";
   onDeduction: (amount: number) => void;
 };
 
@@ -27,6 +28,7 @@ export function DeductionPad({
   maxAdditionalDeduction,
   deductionTotal,
   executionScore,
+  layout = "default",
   onDeduction,
 }: Props) {
   const amounts = deductionsForPreset(mode);
@@ -60,7 +62,10 @@ export function DeductionPad({
     typeof deductionTotal === "number" && typeof executionScore === "number";
 
   return (
-    <div className="calc-pad" style={{ touchAction: "manipulation" }}>
+    <div
+      className={`calc-pad${layout === "fullscreen" ? " calc-pad--fullscreen" : ""}`}
+      style={{ touchAction: "manipulation" }}
+    >
       {showDisplay ? (
         <div className="calc-pad-display" aria-label="Score display">
           <div className="calc-pad-display-primary">

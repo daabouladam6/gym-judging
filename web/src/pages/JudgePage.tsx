@@ -60,6 +60,7 @@ export function JudgePage() {
   const [dAmendNoteConfirmed, setDAmendNoteConfirmed] = useState<string | null>(null);
   /** Optimistic deduction sum not yet reflected in snapshot (clears when server deductionTotal updates). */
   const [pendingDeductionSum, setPendingDeductionSum] = useState(0);
+  const [judgeTab, setJudgeTab] = useState<"roster" | "calculator">("roster");
 
   const refresh = useCallback(async () => {
     if (!compId) return;
@@ -199,6 +200,14 @@ export function JudgePage() {
   /** Routine lock, or score row marked locked (includes finalized — used only before finalize). */
   const locked = !!(selectedRoutine?.locked || myScore?.locked);
 
+  const showCalcTab = Boolean(
+    panelRole === "E" && selectedAthlete && myScore && !myScore.finalized && !routineLocked,
+  );
+
+  useEffect(() => {
+    if (!showCalcTab && judgeTab === "calculator") setJudgeTab("roster");
+  }, [showCalcTab, judgeTab]);
+
   /** Next WS expectedVersion for E deductions; bumps optimistically so rapid taps do not reuse stale React state. */
   const eDeductionNextVersionRef = useRef<{ scoreId: string; v: number } | null>(null);
 
@@ -258,6 +267,7 @@ export function JudgePage() {
       setSelectedAthleteId(athlete.id);
       setSelectedRoutineId(res.routineId);
       setPanelRole(res.panelRole);
+      if (res.panelRole === "E") setJudgeTab("calculator");
       await refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start judging");
@@ -503,8 +513,8 @@ export function JudgePage() {
   }
 
   return (
-    <div className="judge-app">
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>
+    <div className={`judge-app${showCalcTab && judgeTab === "calculator" ? " judge-app--calc" : ""}`}>
+      <header className="judge-header">
         <div>
           <h1 style={{ margin: 0, fontSize: "1.35rem" }}>Judge panel</h1>
           <p className="muted" style={{ margin: "0.25rem 0 0" }}>
@@ -516,6 +526,25 @@ export function JudgePage() {
           Logout
         </button>
       </header>
+
+      {showCalcTab ? (
+        <nav className="judge-tablist" aria-label="Judge workspace">
+          <button
+            type="button"
+            className={`judge-tab${judgeTab === "roster" ? " judge-tab--active" : ""}`}
+            onClick={() => setJudgeTab("roster")}
+          >
+            Roster
+          </button>
+          <button
+            type="button"
+            className={`judge-tab${judgeTab === "calculator" ? " judge-tab--active" : ""}`}
+            onClick={() => setJudgeTab("calculator")}
+          >
+            Calculator
+          </button>
+        </nav>
+      ) : null}
 
       {error ? (
         <p className="error" style={{ marginTop: "1rem" }}>
@@ -536,7 +565,9 @@ export function JudgePage() {
           </p>
         </section>
       ) : (
-        <div style={{ display: "grid", gap: "1rem", marginTop: "1rem" }}>
+        <div className="judge-body">
+          {(!showCalcTab || judgeTab === "roster") && (
+            <>
           <section className="panel">
             <h2>Competition</h2>
             <select value={compId} onChange={(e) => setCompId(e.target.value)} style={{ width: "100%" }}>
@@ -574,6 +605,7 @@ export function JudgePage() {
                         setSelectedAthleteId("");
                         setSelectedRoutineId("");
                         setPanelRole(undefined);
+                        setJudgeTab("roster");
                       }}
                     >
                       {a.apparatus}
@@ -666,24 +698,11 @@ export function JudgePage() {
                       </button>
                     </div>
                   </details>
-                  <div className="calc-pad-sticky">
-                    <p className="calc-pad-heading muted">
-                      Deduction calculator · {preset.replace("_", " ")}
+                  {showCalcTab ? (
+                    <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
+                      Open the <strong>Calculator</strong> tab for full-screen deduction keys.
                     </p>
-                    <DeductionPad
-                      mode={preset}
-                      disabled={locked || !ready}
-                      maxAdditionalDeduction={eExecNumbers?.additionalHeadroom}
-                      deductionTotal={eExecNumbers?.displaySd ?? myScore.deductionTotal ?? 0}
-                      executionScore={eExecNumbers?.displayExec ?? myScore.computedValue}
-                      onDeduction={onDeduction}
-                    />
-                    <div className="calc-pad-finalize">
-                      <button type="button" className="primary calc-pad-finalize-btn" disabled={locked || !ready} onClick={onFinalize}>
-                        Finalize deductions
-                      </button>
-                    </div>
-                  </div>
+                  ) : null}
                 </>
               ) : (
                 <div style={{ display: "grid", gap: "0.75rem" }}>
@@ -918,6 +937,40 @@ export function JudgePage() {
                   ) : null}
                 </div>
               )}
+            </section>
+          ) : null}
+            </>
+          )}
+
+          {showCalcTab && judgeTab === "calculator" && selectedAthlete && myScore ? (
+            <section className="judge-calc-screen" aria-label="Deduction calculator">
+              <div className="judge-calc-context">
+                <p className="judge-calc-athlete">{selectedAthlete.name}</p>
+                <p className="judge-calc-meta muted">
+                  {activeApparatus} · {preset.replace("_", " ")}
+                </p>
+              </div>
+              <div className="judge-calc-pad-wrap">
+                <DeductionPad
+                  layout="fullscreen"
+                  mode={preset}
+                  disabled={locked || !ready}
+                  maxAdditionalDeduction={eExecNumbers?.additionalHeadroom}
+                  deductionTotal={eExecNumbers?.displaySd ?? myScore.deductionTotal ?? 0}
+                  executionScore={eExecNumbers?.displayExec ?? myScore.computedValue}
+                  onDeduction={onDeduction}
+                />
+              </div>
+              <div className="judge-calc-actions">
+                <button
+                  type="button"
+                  className="primary calc-pad-finalize-btn"
+                  disabled={locked || !ready}
+                  onClick={onFinalize}
+                >
+                  Finalize deductions
+                </button>
+              </div>
             </section>
           ) : null}
         </div>
