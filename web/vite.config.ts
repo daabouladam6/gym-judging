@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
+import { VitePWA } from "vite-plugin-pwa";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -56,7 +57,32 @@ function debugDevListenPlugin(): import("vite").Plugin {
 /** #endregion */
 
 export default defineConfig({
-  plugins: [react(), debugDevListenPlugin()],
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: "autoUpdate",
+      includeAssets: ["icon.svg"],
+      manifest: {
+        name: "Gym Judging",
+        short_name: "Judging",
+        description: "Gymnastics competition judging and arena control",
+        theme_color: "#05070d",
+        background_color: "#05070d",
+        display: "standalone",
+        orientation: "any",
+        start_url: "/",
+        icons: [
+          {
+            src: "icon.svg",
+            sizes: "any",
+            type: "image/svg+xml",
+            purpose: "any maskable",
+          },
+        ],
+      },
+    }),
+    debugDevListenPlugin(),
+  ],
   server: {
     // Bind IPv4 explicitly — some Windows setups resolve `localhost` to IPv6 ::1 while
     // Vite only listened on IPv4, which yields ERR_CONNECTION_REFUSED (-102).

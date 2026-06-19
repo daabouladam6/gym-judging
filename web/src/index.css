@@ -2,12 +2,19 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   background: #05070d;
   color: #e8eef8;
   line-height: 1.45;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+  overscroll-behavior: none;
 }
 
 a {
@@ -53,6 +60,30 @@ a {
   font-size: 1.25rem;
   font-weight: 650;
   letter-spacing: -0.02em;
+}
+
+.admin-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.live-pill {
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.28rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid #3a4d6e;
+  color: #8a9bb8;
+}
+
+.live-pill--on {
+  border-color: #2d6a4f;
+  color: #6ee7a8;
+  background: color-mix(in srgb, #2d6a4f 18%, transparent);
 }
 
 .admin-tablist {

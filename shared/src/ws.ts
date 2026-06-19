@@ -79,6 +79,10 @@ export const clientWsMessageSchema = z.discriminatedUnion("type", [
     payload: z.object({ sessionToken: z.string().uuid() }),
   }),
   z.object({
+    type: z.literal("competition.subscribe"),
+    competitionId: z.string().uuid(),
+  }),
+  z.object({
     type: z.literal("score.applyDeduction"),
     competitionId: z.string().uuid(),
     routineId: z.string().uuid().optional(),

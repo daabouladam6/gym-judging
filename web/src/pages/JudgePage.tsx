@@ -17,7 +17,7 @@ import {
 } from "../api/client";
 import { useSession } from "../auth/SessionProvider";
 import { DeductionPad } from "../components/DeductionPad";
-import { useJudgeWs } from "../hooks/useJudgeWs";
+import { useJudgeWs } from "../hooks/useCompetitionWs";
 import {
   athleteMatchesCategoryKey,
   categoryLabel,

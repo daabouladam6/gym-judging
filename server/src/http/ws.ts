@@ -2,7 +2,7 @@ import { clientWsMessageSchema } from "@gym/shared";
 import type { FastifyInstance } from "fastify";
 import type { WebSocket } from "ws";
 import { validateSession } from "../auth/session.js";
-import { broadcast, subscribe } from "../realtime.js";
+import { broadcast, registerGlobalSocket, subscribe } from "../realtime.js";
 import { rebuildLeaderboard } from "../services/aggregation.js";
 import {
   adminOverrideScore,
@@ -19,6 +19,7 @@ export async function registerWebSocket(app: FastifyInstance) {
   app.get("/ws", { websocket: true }, (socket: WebSocket) => {
     let userId: string | null = null;
     const unsubscribers: Array<() => void> = [];
+    let unregisterGlobal: (() => void) | null = null;
     const joined = new Set<string>();
 
     const joinCompetition = (competitionId: string) => {
@@ -32,6 +33,8 @@ export async function registerWebSocket(app: FastifyInstance) {
       unsubscribers.forEach((u) => u());
       unsubscribers.length = 0;
       joined.clear();
+      unregisterGlobal?.();
+      unregisterGlobal = null;
     };
 
     socket.on("message", async (buf) => {
@@ -55,12 +58,19 @@ export async function registerWebSocket(app: FastifyInstance) {
             return;
           }
           userId = user.id;
+          unregisterGlobal?.();
+          unregisterGlobal = registerGlobalSocket(socket);
           socket.send(JSON.stringify({ type: "auth.ok" }));
           return;
         }
 
         if (!userId) {
           socket.send(JSON.stringify({ type: "error.auth", error: "Not authenticated" }));
+          return;
+        }
+
+        if (msg.type === "competition.subscribe") {
+          joinCompetition(msg.competitionId);
           return;
         }
 

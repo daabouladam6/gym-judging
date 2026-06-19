@@ -84,6 +84,7 @@ import { athleteCategoryKey, categoryLabel } from "@gym/shared";
 
 import { AdminScoresSection } from "./AdminScoresSection";
 import { AdminHistorySection } from "./AdminHistorySection";
+import { useCompetitionWs } from "../hooks/useCompetitionWs";
 
 type AdminSectionId = "competition" | "athletes" | "judges" | "categories" | "scores" | "corrections" | "history";
 
@@ -303,6 +304,72 @@ export function AdminPage() {
     setCorrectionRequests(requests);
 
   }, [activeId, correctionListMode]);
+
+
+
+  const refreshLiveData = useCallback(async () => {
+
+    try {
+
+      await refreshCompetitions();
+
+      await refreshJudges();
+
+      if (activeId) {
+
+        await Promise.all([
+
+          refreshAthletes(activeId),
+
+          refreshAssignments(activeId),
+
+          refreshCategories(activeId),
+
+          refreshCategoryAssignments(activeId),
+
+          refreshSnapshot(activeId),
+
+          refreshCorrectionRequests(),
+
+        ]);
+
+      }
+
+    } catch {
+
+      setError("Could not refresh live data");
+
+    }
+
+  }, [
+
+    activeId,
+
+    refreshCompetitions,
+
+    refreshJudges,
+
+    refreshAthletes,
+
+    refreshAssignments,
+
+    refreshCategories,
+
+    refreshCategoryAssignments,
+
+    refreshSnapshot,
+
+    refreshCorrectionRequests,
+
+  ]);
+
+
+
+  const { ready: liveReady } = useCompetitionWs(activeId || undefined, () => {
+
+    void refreshLiveData();
+
+  });
 
 
 
@@ -978,11 +1045,19 @@ export function AdminPage() {
 
             </div>
 
-            <button type="button" className="ghost" onClick={() => void session.logoutFn().then(() => nav("/login"))}>
+            <div className="admin-toolbar-actions">
+              <span
+                className={`live-pill${liveReady ? " live-pill--on" : ""}`}
+                title={liveReady ? "Live updates on" : "Connecting…"}
+              >
+                {liveReady ? "Live" : "…"}
+              </span>
+              <button type="button" className="ghost" onClick={() => void session.logoutFn().then(() => nav("/login"))}>
 
               Logout
 
             </button>
+            </div>
 
           </div>
 

@@ -36,6 +36,7 @@ import {
 } from "../services/delete.js";
 import { buildCompetitionViewerPayload, listUsersSafe } from "../services/state.js";
 import { dbgBoot } from "../debugBoot.js";
+import { notifyCompetitionUpdated, notifyGlobalUpdated } from "../notify.js";
 
 const AGENT_DEBUG_LOG = path.join(path.dirname(fileURLToPath(import.meta.url)), "../../../debug-5f3141.log");
 function agentDebugNdjson(payload: Record<string, unknown>) {
@@ -221,6 +222,8 @@ export async function registerHttpRoutes(app: FastifyInstance) {
     });
     await rebuildLeaderboard(id);
     const [created] = await db.select().from(competitions).where(eq(competitions.id, id));
+    notifyGlobalUpdated();
+    notifyCompetitionUpdated(id);
     return { competition: created };
   });
 
@@ -239,6 +242,7 @@ export async function registerHttpRoutes(app: FastifyInstance) {
     const [row] = await db.select().from(competitions).where(eq(competitions.id, id));
     if (!row) return reply.code(404).send({ error: "Not found" });
     await deleteCompetitionById(id);
+    notifyGlobalUpdated();
     reply.code(204).send();
   });
 
@@ -454,6 +458,7 @@ export async function registerHttpRoutes(app: FastifyInstance) {
         }).catch(() => {});
       }
       // #endregion
+      notifyCompetitionUpdated(id);
       return { athlete: created };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -496,6 +501,7 @@ export async function registerHttpRoutes(app: FastifyInstance) {
     const [row] = await db.select().from(athletes).where(eq(athletes.id, athleteId));
     if (!row || row.competitionId !== compId) return reply.code(404).send({ error: "Not found" });
     await deleteAthleteById(athleteId);
+    notifyCompetitionUpdated(compId);
     reply.code(204).send();
   });
 
@@ -527,6 +533,7 @@ export async function registerHttpRoutes(app: FastifyInstance) {
     await spawnRoutineScores(rid, id, parsed.data.apparatus);
     await rebuildLeaderboard(id);
     const [created] = await db.select().from(routines).where(eq(routines.id, rid));
+    notifyCompetitionUpdated(id);
     return { routine: created };
   });
 
@@ -588,6 +595,7 @@ export async function registerHttpRoutes(app: FastifyInstance) {
 
     const routine = await ensureRoutineForAthlete(id, parsed.data.athleteId, apparatus);
     await rebuildLeaderboard(id);
+    notifyCompetitionUpdated(id);
 
     return {
       routineId: routine.id,
@@ -652,6 +660,7 @@ export async function registerHttpRoutes(app: FastifyInstance) {
     }
     await rebuildLeaderboard(id);
     const [row] = await db.select().from(judgeAssignments).where(eq(judgeAssignments.id, jid));
+    notifyCompetitionUpdated(id);
     return { assignment: row };
   });
 
@@ -667,6 +676,7 @@ export async function registerHttpRoutes(app: FastifyInstance) {
       if (msg === "Assignment not found") return reply.code(404).send({ error: "Not found" });
       throw e;
     }
+    notifyCompetitionUpdated(compId);
     reply.code(204).send();
   });
 
@@ -810,6 +820,7 @@ export async function registerHttpRoutes(app: FastifyInstance) {
       .select()
       .from(judgeCategoryAssignments)
       .where(eq(judgeCategoryAssignments.id, cid));
+    notifyCompetitionUpdated(id);
     return { assignment: row };
   });
 
@@ -824,6 +835,7 @@ export async function registerHttpRoutes(app: FastifyInstance) {
       .where(eq(judgeCategoryAssignments.id, assignmentId));
     if (!row || row.competitionId !== compId) return reply.code(404).send({ error: "Not found" });
     await db.delete(judgeCategoryAssignments).where(eq(judgeCategoryAssignments.id, assignmentId));
+    notifyCompetitionUpdated(compId);
     reply.code(204).send();
   });
 
@@ -890,6 +902,7 @@ export async function registerHttpRoutes(app: FastifyInstance) {
       if (m === "Request not found") return reply.code(404).send({ error: m });
       return reply.code(400).send({ error: m });
     }
+    notifyCompetitionUpdated(compId);
     return { ok: true };
   });
 
@@ -912,6 +925,7 @@ export async function registerHttpRoutes(app: FastifyInstance) {
       if (m === "Request not found") return reply.code(404).send({ error: m });
       return reply.code(400).send({ error: m });
     }
+    notifyCompetitionUpdated(compId);
     return { ok: true };
   });
 
@@ -929,6 +943,7 @@ export async function registerHttpRoutes(app: FastifyInstance) {
       .limit(1);
     if (!hit) return reply.code(404).send({ error: "Not found" });
     await db.delete(scoreModificationLogs).where(eq(scoreModificationLogs.id, logId));
+    notifyCompetitionUpdated(compId);
     reply.code(204).send();
   });
 
@@ -954,6 +969,7 @@ export async function registerHttpRoutes(app: FastifyInstance) {
     const ids = [...new Set(rows.map((r) => r.id))];
     if (ids.length === 0) return { deletedCount: 0 };
     await db.delete(scoreModificationLogs).where(inArray(scoreModificationLogs.id, ids));
+    notifyCompetitionUpdated(compId);
     return { deletedCount: ids.length };
   });
 
@@ -989,6 +1005,7 @@ export async function registerHttpRoutes(app: FastifyInstance) {
     }
 
     const [created] = await db.select().from(users).where(eq(users.id, id));
+    notifyGlobalUpdated();
     return {
       user: { id: created.id, username: created.username, displayName: created.displayName, role: created.role },
     };
@@ -1001,6 +1018,7 @@ export async function registerHttpRoutes(app: FastifyInstance) {
     const { userId } = req.params as { userId: string };
     try {
       await deleteJudgeById(userId);
+      notifyGlobalUpdated();
       reply.code(204).send();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Delete failed";
@@ -1031,6 +1049,7 @@ export async function registerHttpRoutes(app: FastifyInstance) {
         expectedVersion: parsed.data.expectedVersion,
       });
       await rebuildLeaderboard(id);
+      notifyCompetitionUpdated(id);
       return { ok: true };
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Update failed";
@@ -1061,6 +1080,7 @@ export async function registerHttpRoutes(app: FastifyInstance) {
         expectedVersion: parsed.data.expectedVersion,
       });
       await rebuildLeaderboard(id);
+      notifyCompetitionUpdated(id);
       return { ok: true };
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Update failed";
@@ -1109,6 +1129,7 @@ export async function registerHttpRoutes(app: FastifyInstance) {
         ),
       );
     await rebuildLeaderboard(id);
+    notifyCompetitionUpdated(id);
     return { ok: true as const, archivedCount: toArchive.length };
   });
 
@@ -1151,6 +1172,7 @@ export async function registerHttpRoutes(app: FastifyInstance) {
         ),
       );
     await rebuildLeaderboard(id);
+    notifyCompetitionUpdated(id);
     return { ok: true as const, restoredCount: toRestore.length };
   });
 
@@ -1180,6 +1202,8 @@ export async function registerHttpRoutes(app: FastifyInstance) {
     await rebuildLeaderboard(id);
     const [updated] = await db.select().from(competitions).where(eq(competitions.id, id));
     void parsed.data.reason;
+    notifyGlobalUpdated();
+    notifyCompetitionUpdated(id);
     return { competition: updated };
   });
 
@@ -1216,6 +1240,7 @@ export async function registerHttpRoutes(app: FastifyInstance) {
     void parsed.data.reason;
     await rebuildLeaderboard(compId);
     const [updated] = await db.select().from(athletes).where(eq(athletes.id, athleteId));
+    notifyCompetitionUpdated(compId);
     return { athlete: updated };
   });
 }
